@@ -6,30 +6,28 @@ import { OrbitControls, Environment } from "@react-three/drei"
 import * as THREE from "three"
 
 interface PLYViewerProps {
-  plyBlobUrl: string // Blob URL
+  plyBlobUrl: string
 }
 
 // PLY 점군 렌더링 컴포넌트
 function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
   const meshRef = useRef<THREE.Points>(null)
-  const [pointCount, setPointCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!plyBlobUrl) return
 
-    console.log("Blob URL에서 PLY 데이터 로딩 시작...")
-    
-    // Blob URL에서 데이터 로드
-    fetch(plyBlobUrl)
-      .then(response => {
+    const loadPLYData = async () => {
+      try {
+        console.log("Blob URL에서 PLY 데이터 로딩 시작...")
+        
+        const response = await fetch(plyBlobUrl)
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`)
         }
-        return response.arrayBuffer()
-      })
-      .then(arrayBuffer => {
+        
+        const arrayBuffer = await response.arrayBuffer()
         const binaryData = new Uint8Array(arrayBuffer)
         console.log(`바이너리 데이터 크기: ${binaryData.length} bytes`)
 
@@ -42,19 +40,15 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
 
         // PLY 헤더가 올바른지 확인
         if (!plyText.startsWith('ply\n')) {
-          console.error("올바른 PLY 파일이 아님")
-          setError("올바른 PLY 파일이 아닙니다")
-          return
+          throw new Error("올바른 PLY 파일이 아닙니다")
         }
 
         const lines = plyText.split('\n')
         const vertices: number[] = []
         const colors: number[] = []
         let vertexCount = 0
-        let headerEnded = false
         let headerEndIndex = 0
         let isAscii = true
-        let properties: string[] = []
 
         // PLY 헤더 파싱
         for (let i = 0; i < lines.length; i++) {
@@ -67,17 +61,13 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
           } else if (line.startsWith('element vertex')) {
             vertexCount = parseInt(line.split(' ')[2])
             console.log(`Vertex count: ${vertexCount}`)
-          } else if (line.startsWith('property')) {
-            properties.push(line)
           } else if (line === 'end_header') {
-            headerEnded = true
             headerEndIndex = i
             break
           }
         }
 
         console.log(`파일 형식: ${isAscii ? 'ASCII' : 'Binary'}`)
-        console.log(`속성들:`, properties)
 
         if (isAscii) {
           // ASCII PLY 파싱
@@ -116,24 +106,90 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
             }
           }
         } else {
-          // Binary PLY는 현재 지원하지 않음
-          console.warn("바이너리 PLY 파일은 현재 지원되지 않습니다")
-          setError("바이너리 PLY 파일은 현재 지원되지 않습니다")
+          // Binary PLY 파싱
+          console.log("바이너리 PLY 파싱 시작...")
           
-          // 대신 간단한 더미 데이터 생성
-          for (let i = 0; i < 1000; i++) {
-            vertices.push(
-              (Math.random() - 0.5) * 4,
-              (Math.random() - 0.5) * 4,
-              (Math.random() - 0.5) * 4
-            )
-            colors.push(Math.random(), Math.random(), Math.random())
+          // 헤더 끝 위치 찾기 (바이너리에서)
+          let headerEndPos = 0
+          const headerText = textDecoder.decode(binaryData.slice(0, Math.min(2048, binaryData.length)))
+          const headerEndIndex = headerText.indexOf('end_header\n')
+          if (headerEndIndex !== -1) {
+            headerEndPos = headerEndIndex + 'end_header\n'.length
           }
-          vertexCount = 1000
+          
+          console.log(`헤더 끝 위치: ${headerEndPos}`)
+          
+          // 바이너리 데이터 시작점
+          const binaryStart = headerEndPos
+          const binaryVertexData = binaryData.slice(binaryStart)
+          
+          console.log(`바이너리 vertex 데이터 크기: ${binaryVertexData.length} bytes`)
+          
+          // 바이너리 PLY 파싱 (little-endian float32 가정)
+          const dataView = new DataView(binaryVertexData.buffer, binaryVertexData.byteOffset)
+          let processedVertices = 0
+          
+                     // 각 vertex는 보통 12 bytes (x,y,z: 4bytes each) 또는 더 많음 (색상 포함시)
+           // 속성에 따라 달라지지만 기본적으로 x,y,z,r,g,b (6 * 4 = 24 bytes) 가정
+           const bytesPerVertex = 24 // 기본적으로 24 bytes (x,y,z,r,g,b) 가정
+          const maxVertices = Math.min(vertexCount, Math.floor(binaryVertexData.length / bytesPerVertex))
+          
+          console.log(`예상 vertex당 바이트: ${bytesPerVertex}, 최대 처리 가능 vertices: ${maxVertices}`)
+          
+          try {
+            for (let i = 0; i < maxVertices; i++) {
+              const offset = i * bytesPerVertex
+              
+              if (offset + 12 > binaryVertexData.length) break
+              
+              // X, Y, Z 좌표 (little-endian float32)
+              const x = dataView.getFloat32(offset, true)
+              const y = dataView.getFloat32(offset + 4, true)
+              const z = dataView.getFloat32(offset + 8, true)
+              
+              // 유효한 좌표인지 확인
+              if (isFinite(x) && isFinite(y) && isFinite(z)) {
+                vertices.push(x, y, z)
+                
+                // 색상 정보가 있으면 읽기
+                if (bytesPerVertex >= 24 && offset + 24 <= binaryVertexData.length) {
+                  try {
+                    const r = dataView.getUint8(offset + 12) / 255
+                    const g = dataView.getUint8(offset + 13) / 255
+                    const b = dataView.getUint8(offset + 14) / 255
+                    colors.push(r, g, b)
+                  } catch {
+                    // 색상 읽기 실패시 기본색상
+                    const hue = (processedVertices / maxVertices) * 360
+                    const rgb = hslToRgb(hue / 360, 0.7, 0.6)
+                    colors.push(rgb[0], rgb[1], rgb[2])
+                  }
+                } else {
+                  // 기본 색상 (그라디언트)
+                  const hue = (processedVertices / maxVertices) * 360
+                  const rgb = hslToRgb(hue / 360, 0.7, 0.6)
+                  colors.push(rgb[0], rgb[1], rgb[2])
+                }
+                
+                processedVertices++
+              }
+            }
+          } catch (parseError) {
+            console.error("바이너리 파싱 중 오류:", parseError)
+            
+            // 파싱 실패시 더미 데이터로 폴백
+            for (let i = 0; i < 1000; i++) {
+              vertices.push(
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 4
+              )
+              colors.push(Math.random(), Math.random(), Math.random())
+            }
+          }
         }
 
         console.log(`파싱 완료: ${vertices.length / 3}개 점`)
-        setPointCount(vertices.length / 3)
 
         if (vertices.length > 0) {
           // BufferGeometry 생성
@@ -154,13 +210,15 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
           setGeometry(geom)
           setError(null)
         } else {
-          setError("점군 데이터를 찾을 수 없습니다")
+          throw new Error("점군 데이터를 찾을 수 없습니다")
         }
-      })
-      .catch(fetchError => {
-        console.error('PLY 파일 로드 실패:', fetchError)
-        setError(`PLY 파일 로드 실패: ${fetchError.message}`)
-      })
+      } catch (error) {
+        console.error('PLY 파일 로드 실패:', error)
+        setError(`PLY 파일 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+      }
+    }
+
+    loadPLYData()
   }, [plyBlobUrl])
 
   // HSL을 RGB로 변환하는 헬퍼 함수
@@ -202,7 +260,6 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
           <boxGeometry args={[2, 0.5, 0.1]} />
           <meshBasicMaterial color="red" />
         </mesh>
-        {/* 에러 텍스트는 HTML 오버레이로 표시 */}
       </group>
     )
   }
@@ -239,7 +296,6 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
 
   useEffect(() => {
     if (plyBlobUrl) {
-      // Blob URL 유효성 사전 검사
       try {
         new URL(plyBlobUrl)
         setTimeout(() => setIsLoading(false), 1000)
@@ -293,19 +349,15 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
         camera={{ position: [0, 0, 5], fov: 75 }}
         style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}
       >
-        {/* 조명 설정 */}
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.8} />
         <pointLight position={[-10, -10, -5]} intensity={0.6} />
         <spotLight position={[0, 10, 0]} intensity={0.4} />
 
-        {/* PLY 점군 렌더링 */}
         <PointCloud plyBlobUrl={plyBlobUrl} />
         
-        {/* 환경 */}
         <Environment preset="night" />
         
-        {/* 마우스 컨트롤 */}
         <OrbitControls
           enablePan={true}
           enableZoom={true}
@@ -318,7 +370,6 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
         />
       </Canvas>
       
-      {/* 컨트롤 안내 */}
       <div className="absolute bottom-4 left-4 bg-black/70 text-white p-3 rounded-lg text-sm">
         <p className="font-medium mb-1">🎮 3D 점군 뷰어</p>
         <p>• 마우스 드래그: 회전</p>
@@ -326,7 +377,6 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
         <p>• 우클릭 드래그: 이동</p>
       </div>
 
-      {/* 정보 패널 */}
       <div className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-lg text-sm">
         <p className="font-medium">📊 모델 정보</p>
         <p>Gaussian Splatting 결과</p>

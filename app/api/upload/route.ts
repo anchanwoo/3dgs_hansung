@@ -43,25 +43,26 @@ export async function POST(request: NextRequest) {
     const uint8Array = new Uint8Array(plyBuffer)
     console.log(`인코딩할 데이터 크기: ${uint8Array.length} bytes`)
     
-    // 더 작은 청크로 나누어 인코딩 (스택 오버플로우 방지)
-    let base64Data = ""
-    const chunkSize = 1024 // 1KB 청크로 줄임
+    let base64Data: string
     
     try {
+      // 스택 오버플로우를 방지하면서 올바른 Base64 인코딩
+      // 먼저 바이너리 데이터를 문자열로 변환 (청크 단위)
+      let binaryString = ""
+      const chunkSize = 1024 // 1KB 청크
+      
       for (let i = 0; i < uint8Array.length; i += chunkSize) {
         const chunk = uint8Array.slice(i, i + chunkSize)
         const chunkArray = Array.from(chunk)
-        const chunkString = String.fromCharCode.apply(null, chunkArray)
-        base64Data += btoa(chunkString)
+        binaryString += String.fromCharCode.apply(null, chunkArray)
       }
+      
+      console.log(`바이너리 문자열 생성 완료: ${binaryString.length} 문자`)
+      
+      // 전체 바이너리 문자열을 한 번에 Base64 인코딩
+      base64Data = btoa(binaryString)
       
       console.log(`Base64 인코딩 완료: ${base64Data.length} 문자`)
-      
-      // Base64 문자열 유효성 검증
-      if (base64Data.length % 4 !== 0) {
-        // 패딩 추가
-        base64Data += '='.repeat(4 - (base64Data.length % 4))
-      }
       
     } catch (encodingError) {
       console.error("Base64 인코딩 실패:", encodingError)
