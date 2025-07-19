@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment } from "@react-three/drei"
 import * as THREE from "three"
 
@@ -192,7 +192,7 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
         console.log(`파싱 완료: ${vertices.length / 3}개 점`)
 
         if (vertices.length > 0) {
-          // 업샘플링/노이즈/색상 추가 코드 제거
+          // 업샘플링/노이즈/랜덤 색상/자동 회전 등 관련 코드 완전 제거
           // vertices, colors 그대로 BufferGeometry에 사용
           const geom = new THREE.BufferGeometry()
           geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
@@ -338,6 +338,7 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
       <Canvas
         camera={{ position: [0, 0, 5], fov: 75 }}
         style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}
+        frameloop="demand"
       >
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.8} />
@@ -357,6 +358,11 @@ export default function PLYViewer({ plyBlobUrl }: PLYViewerProps) {
           autoRotate={false}
           dampingFactor={0.05}
           enableDamping={true}
+          onChange={() => {
+            // invalidate()를 호출하여 카메라 조작 시만 렌더링
+            const { invalidate } = useThree();
+            invalidate();
+          }}
         />
       </Canvas>
       

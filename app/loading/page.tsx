@@ -82,20 +82,23 @@ export default function LoadingPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-[#F5E6D3] flex flex-col items-center justify-center p-4">
-      <div className="loading-container">
-        <div className="content-container">
-          <div className="loading-text">PROCESSING</div>
-          {/* 진행 상태 텍스트 위에 로딩 애니메이션 추가 */}
-          <div className="flex justify-center items-center mb-8">
-            <div className="animate-bounce w-8 h-8 bg-blue-400 rounded-full opacity-70"></div>
-          </div>
-          <div className="stage-text">{stage}</div>
-          <div className="progress-container">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${progress}%`, background: '#3498db', height: 8, borderRadius: 4 }}></div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-yellow-100">
+      <div className="flex flex-col items-center justify-center mb-12">
+        <div className="relative w-32 h-32 mb-8">
+          <div className="absolute inset-0 animate-spin rounded-full border-8 border-blue-400 border-t-transparent"></div>
+          <div className="absolute inset-4 animate-pulse rounded-full border-4 border-yellow-300 border-t-transparent"></div>
+          <div className="absolute inset-8 bg-blue-200 rounded-full opacity-60"></div>
+        </div>
+        <div className="text-3xl font-bold text-blue-900 mb-4">3D 모델 생성 중...</div>
+        <div className="text-lg text-gray-700 mb-8">잠시만 기다려 주세요.</div>
+        <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-8 flex flex-col items-center">
+          <div className="loading-text text-2xl font-semibold mb-4">PROCESSING</div>
+          <div className="stage-text text-lg text-blue-700 mb-4">{stage}</div>
+          <div className="progress-container w-full mb-2">
+            <div className="progress-bar w-full h-6 bg-blue-100 rounded-full overflow-hidden">
+              <div className="progress-fill h-6 bg-gradient-to-r from-blue-400 to-yellow-300 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
             </div>
-            <div className="progress-text">{Math.round(progress)}%</div>
+            <div className="progress-text text-right text-blue-900 font-bold mt-1">{Math.round(progress)}%</div>
           </div>
         </div>
       </div>
