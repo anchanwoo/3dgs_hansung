@@ -51,10 +51,8 @@ export default function HomePage() {
     if (selectedImages.length === 0) return
     setIsUploading(true)
     try {
-      // 이미지 파일을 sessionStorage에 임시 저장 (Blob은 직접 저장 불가, 이름만 저장)
-      sessionStorage.setItem("selectedImages", JSON.stringify(selectedImages.map(f => f.name)))
-      // 실제 파일은 로딩 페이지에서 window.selectedFiles 등으로 전달 필요
-      // 로딩 페이지로 이동
+      // 핵심 기능: window.selectedFiles에 파일 객체 저장
+      window.selectedFiles = selectedImages;
       router.push("/loading")
     } catch (error) {
       console.error("Upload error:", error)
@@ -64,20 +62,15 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5E6D3] flex flex-col items-center justify-center p-6">
-      {/* 로고 */}
-      <div className="mb-12">
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-hyYpgbtHpnjhY0QvyjUbUKXh7ChY9K.png"
-          alt="3D Reconstruction Logo"
-          className="w-64 h-64 object-contain"
-        />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 flex flex-col items-center justify-center p-6">
+      <div className="mb-10 flex flex-col items-center">
+        <img src="/logo.png" alt="3DGS Logo" className="w-40 h-40 object-contain drop-shadow-lg" />
+        <h1 className="text-3xl font-bold text-blue-900 mt-4">3D Gaussian Splatting WebApp</h1>
+        <p className="text-gray-600 mt-2">여러 장의 이미지를 업로드해 3D 모델을 만들어보세요!</p>
       </div>
-      {/* 메인 업로드 카드 */}
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-8 mb-8">
-        {/* 드래그 앤 드롭 영역 */}
+      <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
         <div
-          className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
             dragActive
               ? "border-blue-500 bg-blue-50"
               : selectedImages.length > 0
@@ -90,81 +83,45 @@ export default function HomePage() {
           onDrop={handleDrop}
           onClick={handleFileSelect}
         >
-          <div className="flex flex-col items-center space-y-3 cursor-pointer">
-            <div
-              className={`p-3 rounded-full ${
-                dragActive ? "bg-blue-100" : selectedImages.length > 0 ? "bg-green-100" : "bg-gray-100"
-              }`}
-            >
-              <Upload
-                className={`h-8 w-8 ${
-                  dragActive ? "text-blue-600" : selectedImages.length > 0 ? "text-green-600" : "text-gray-400"
-                }`}
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-lg font-medium text-gray-900">
-                {dragActive
-                  ? "이미지를 여기에 놓으세요"
-                  : selectedImages.length > 0
-                    ? `${selectedImages.length}개의 이미지가 선택됨`
-                    : "이미지를 드래그하여 업로드"}
-              </p>
-              <p className="text-gray-500">또는 클릭하여 파일 선택</p>
-            </div>
-            <Button variant="outline" className="cursor-pointer px-6 py-2" type="button">
-              <ImageIcon className="h-4 w-4 mr-2" />
-              파일 선택
-            </Button>
-            <p className="text-sm text-gray-400">JPG, PNG, WebP 형식 지원</p>
-          </div>
+          <Upload className="mx-auto h-10 w-10 text-blue-400 mb-2" />
+          <p className="text-lg font-semibold">
+            {dragActive
+              ? "이미지를 여기에 놓으세요"
+              : selectedImages.length > 0
+                ? `${selectedImages.length}개 이미지 선택됨`
+                : "이미지를 드래그하거나 클릭해서 업로드"}
+          </p>
+          <p className="text-gray-400 text-sm mt-1">JPG, PNG, WebP 지원</p>
+          <Button variant="outline" className="mt-4" type="button">
+            <ImageIcon className="h-4 w-4 mr-2" />
+            파일 선택
+          </Button>
         </div>
         <input id="file-upload" type="file" multiple accept="image/*" className="hidden" onChange={handleFileInput} />
-        {/* 선택된 이미지 미리보기 */}
         {selectedImages.length > 0 && (
-          <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">선택된 이미지</h3>
-            <div className="grid grid-cols-4 md:grid-cols-6 gap-3 max-h-48 overflow-y-auto">
-              {selectedImages.map((file, index) => (
-                <div key={index} className="relative group">
-                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-300 transition-colors">
-                    <img
-                      src={URL.createObjectURL(file) || "/placeholder.svg"}
-                      alt={`Upload ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+          <div className="mt-6">
+            <h3 className="text-base font-semibold text-gray-800 mb-2">선택된 이미지</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {selectedImages.map((file, idx) => (
+                <div key={idx} className="relative group">
+                  <img src={URL.createObjectURL(file)} alt="" className="w-full h-20 object-cover rounded-lg border" />
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeImage(index)
-                    }}
+                    onClick={e => { e.stopPropagation(); removeImage(idx); }}
                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    ×
-                  </button>
+                  >×</button>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
-      {/* 3D 재구성 시작 버튼 */}
-      <Button
-        onClick={handleStartProcessing}
-        disabled={selectedImages.length === 0 || isUploading}
-        className={`px-12 py-4 text-lg rounded-full shadow-lg transition-all duration-200 ${
-          selectedImages.length > 0 && !isUploading
-            ? "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl"
-            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-        }`}
-      >
-        <Play className="h-5 w-5 mr-2" />
-        {isUploading ? "처리 중..." : `3D 재구성 시작 (${selectedImages.length}개 이미지)`}
-      </Button>
-      {/* 안내 텍스트 */}
-      <div className="mt-8 text-center text-gray-600 max-w-2xl">
-        <p className="text-sm">3D 재구성을 위해 동일한 공간을 다양한 각도에서 촬영한 이미지를 업로드하세요</p>
+        <Button
+          onClick={handleStartProcessing}
+          disabled={selectedImages.length === 0 || isUploading}
+          className="w-full mt-8 py-3 text-lg rounded-full shadow-md"
+        >
+          <Play className="h-5 w-5 mr-2" />
+          {isUploading ? "처리 중..." : `3D 재구성 시작 (${selectedImages.length}개)`}
+        </Button>
       </div>
     </div>
   )
