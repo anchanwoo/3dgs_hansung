@@ -65,7 +65,9 @@ export default function HomePage() {
         formData.append("images", file)
       })
 
-      const response = await fetch("/api/upload", {
+      // 환경변수에서 백엔드 API 주소를 읽어옴
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://3dgs.ngrok.app"
+      const response = await fetch(`${apiBaseUrl}/process_images`, {
         method: "POST",
         body: formData,
       })
