@@ -129,9 +129,9 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
           const dataView = new DataView(binaryVertexData.buffer, binaryVertexData.byteOffset)
           let processedVertices = 0
           
-                     // 각 vertex는 보통 12 bytes (x,y,z: 4bytes each) 또는 더 많음 (색상 포함시)
-           // 속성에 따라 달라지지만 기본적으로 x,y,z,r,g,b (6 * 4 = 24 bytes) 가정
-           const bytesPerVertex = 24 // 기본적으로 24 bytes (x,y,z,r,g,b) 가정
+          // 각 vertex는 보통 12 bytes (x,y,z: 4bytes each) 또는 더 많음 (색상 포함시)
+          // 속성에 따라 달라지지만 기본적으로 x,y,z,r,g,b (6 * 4 = 24 bytes) 가정
+          const bytesPerVertex = 24 // 기본적으로 24 bytes (x,y,z,r,g,b) 가정
           const maxVertices = Math.min(vertexCount, Math.floor(binaryVertexData.length / bytesPerVertex))
           
           console.log(`예상 vertex당 바이트: ${bytesPerVertex}, 최대 처리 가능 vertices: ${maxVertices}`)
@@ -210,7 +210,7 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
           setGeometry(geom)
           setError(null)
         } else {
-          throw new Error("점군 데이터를 찾을 수 없습니다")
+          setError("점군 데이터를 찾을 수 없습니다")
         }
       } catch (error) {
         console.error('PLY 파일 로드 실패:', error)

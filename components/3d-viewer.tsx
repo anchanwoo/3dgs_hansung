@@ -1,19 +1,27 @@
 "use client"
 
-import { Suspense, useRef, useState } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { OrbitControls, useGLTF, Environment, Html } from "@react-three/drei"
+import { Suspense, useRef, useState, useEffect } from "react"
+import { Canvas, useFrame, useLoader } from "@react-three/fiber"
+import { OrbitControls, Environment, Html } from "@react-three/drei"
 import { Button } from "@/components/ui/button"
 import { RotateCcw } from "lucide-react"
 import type * as THREE from "three"
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js"
 
 interface ModelProps {
   url: string
 }
 
-function Model({ url }: ModelProps) {
-  const { scene } = useGLTF(url)
-  const meshRef = useRef<THREE.Group>(null)
+function PLYModel({ url }: ModelProps) {
+  const geometry = useLoader(PLYLoader, url)
+  const meshRef = useRef<THREE.Points>(null)
+  const [pointCount, setPointCount] = useState(0)
+
+  useEffect(() => {
+    if (geometry) {
+      setPointCount(geometry.attributes.position.count)
+    }
+  }, [geometry])
 
   useFrame((state) => {
     if (meshRef.current) {
@@ -21,14 +29,25 @@ function Model({ url }: ModelProps) {
     }
   })
 
-  return <primitive ref={meshRef} object={scene} scale={2} />
+  return (
+    <points ref={meshRef}>
+      <primitive object={geometry} />
+      <pointsMaterial
+        size={0.01}
+        sizeAttenuation={true}
+        vertexColors={true}
+        transparent={true}
+        opacity={0.8}
+      />
+    </points>
+  )
 }
 
 function LoadingFallback() {
   return (
     <Html center>
       <div className="bg-white p-4 rounded-lg shadow-lg">
-        <p className="text-gray-600">3D 모델 로딩 중...</p>
+        <p className="text-gray-600">PLY 파일 로딩 중...</p>
       </div>
     </Html>
   )
@@ -61,7 +80,7 @@ export default function ThreeDViewer({ modelUrl }: ThreeDViewerProps) {
         <pointLight position={[-10, -10, -5]} intensity={0.5} />
 
         <Suspense fallback={<LoadingFallback />}>
-          <Model url={modelUrl} />
+          <PLYModel url={modelUrl} />
           <Environment preset="studio" />
         </Suspense>
 
@@ -78,7 +97,7 @@ export default function ThreeDViewer({ modelUrl }: ThreeDViewerProps) {
 
       {/* 사용법 안내 */}
       <div className="absolute bottom-4 left-4 bg-black/70 text-white p-3 rounded-lg text-sm">
-        <p className="font-medium mb-1">3D 뷰어 조작법</p>
+        <p className="font-medium mb-1">3D 점군 뷰어 조작법</p>
         <p>• 마우스 드래그: 회전</p>
         <p>• 휠: 확대/축소</p>
         <p>• 우클릭 드래그: 이동</p>

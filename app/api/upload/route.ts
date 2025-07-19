@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-// 실제 Flask API URL (ngrok 고정 주소)
+// 실제 Flask API URL (로컬 백엔드)
 const FLASK_API_URL = "https://3dgs.ngrok.app"
 
 export async function POST(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No images provided" }, { status: 400 })
     }
 
-    console.log(`Uploading ${files.length} images to Flask API...`)
+    console.log(`Uploading ${files.length} images to Colab Flask API...`)
 
     // Flask API에 이미지 전송
     const flaskFormData = new FormData()
@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
       flaskFormData.append("images", file)
     })
 
-    console.log("Sending request to Flask API...")
+    console.log("Sending request to Colab Flask API...")
     const response = await fetch(`${FLASK_API_URL}/process_images`, {
       method: "POST",
       body: flaskFormData,
-      // 타임아웃 설정 (30분)
+      // 긴 처리 시간을 위한 타임아웃 설정 (30분)
       signal: AbortSignal.timeout(30 * 60 * 1000),
     })
 
@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
     
     try {
       // 스택 오버플로우를 방지하면서 올바른 Base64 인코딩
-      // 먼저 바이너리 데이터를 문자열로 변환 (청크 단위)
       let binaryString = ""
       const chunkSize = 1024 // 1KB 청크
       
@@ -68,6 +67,7 @@ export async function POST(request: NextRequest) {
       console.error("Base64 인코딩 실패:", encodingError)
       throw new Error(`Base64 인코딩 실패: ${encodingError}`)
     }
+
     const sessionId = Date.now().toString()
 
     return NextResponse.json({
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       sessionId: sessionId,
       fileSize: plyBuffer.byteLength,
     })
+
   } catch (error) {
     console.error("Upload API error:", error)
     
