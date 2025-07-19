@@ -1,11 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Upload, ImageIcon, Play } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
 
 export default function PlyUploader() {
   const [loading, setLoading] = useState(false);
@@ -25,8 +20,8 @@ export default function PlyUploader() {
         mode: 'cors',
       });
       if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => null);
-        throw new Error(err?.error || `Upload failed: ${uploadRes.status}`);
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error || `Upload failed: ${uploadRes.status}`);
       }
       const { download_url } = await uploadRes.json();
 
