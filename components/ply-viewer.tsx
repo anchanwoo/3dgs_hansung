@@ -192,21 +192,23 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
         console.log(`파싱 완료: ${vertices.length / 3}개 점`)
 
         if (vertices.length > 0) {
-          // BufferGeometry 생성
-          const geom = new THREE.BufferGeometry()
-          geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-          geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-          
-          // 바운딩 박스 계산 및 중심 정렬
-          geom.computeBoundingSphere()
-          if (geom.boundingSphere) {
-            const center = geom.boundingSphere.center
-            const radius = geom.boundingSphere.radius
-            geom.translate(-center.x, -center.y, -center.z)
-            console.log(`중심 이동: (${-center.x.toFixed(2)}, ${-center.y.toFixed(2)}, ${-center.z.toFixed(2)})`)
-            console.log(`반지름: ${radius.toFixed(2)}`)
+          // === 업샘플링(복제+노이즈) ===
+          const upsampleFactor = 5 // 1이면 그대로, 5면 5배
+          const upVertices: number[] = []
+          const upColors: number[] = []
+          for (let i = 0; i < vertices.length; i += 3) {
+            for (let j = 0; j < upsampleFactor; j++) {
+              upVertices.push(
+                vertices[i] + (Math.random() - 0.5) * 0.01,
+                vertices[i + 1] + (Math.random() - 0.5) * 0.01,
+                vertices[i + 2] + (Math.random() - 0.5) * 0.01
+              )
+              upColors.push(colors[i] ?? 0.2, colors[i + 1] ?? 0.7, colors[i + 2] ?? 1.0)
+            }
           }
-          
+          const geom = new THREE.BufferGeometry()
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(upVertices, 3))
+          geom.setAttribute('color', new THREE.Float32BufferAttribute(upColors, 3))
           setGeometry(geom)
           setError(null)
         } else {
