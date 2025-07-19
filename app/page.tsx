@@ -65,66 +65,30 @@ export default function HomePage() {
         formData.append("images", file)
       })
 
-      // 환경변수에서 백엔드 API 주소를 읽어옴
+      // 1) 업로드 → download_url 획득
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://3dgs.ngrok.app"
-      const response = await fetch(`${apiBaseUrl}/process_images`, {
+      const uploadRes = await fetch(`${apiBaseUrl}/process_images`, {
         method: "POST",
         body: formData,
+        mode: "cors",
       })
-
-      const result = await response.json()
-
-      if (result.success) {
-        // 성공시 결과 페이지로 이동 (큰 파일은 Blob URL로 처리)
-        try {
-          console.log("Base64 데이터 길이:", result.plyData.length)
-          console.log("Base64 데이터 첫 100자:", result.plyData.substring(0, 100))
-          
-          // Base64 문자열 정리 (공백, 줄바꿈 등 제거)
-          const cleanBase64 = result.plyData.replace(/[\s\n\r\t]/g, '')
-          
-          // Base64 패딩 확인 및 수정
-          let paddedBase64 = cleanBase64
-          const remainder = paddedBase64.length % 4
-          if (remainder !== 0) {
-            paddedBase64 += '='.repeat(4 - remainder)
-          }
-          
-          console.log("정리된 Base64 길이:", paddedBase64.length)
-          
-          // 안전한 Base64 디코딩
-          let binaryString: string
-          try {
-            binaryString = atob(paddedBase64)
-          } catch (decodeError) {
-            console.error("Base64 디코딩 실패:", decodeError)
-            console.log("문제가 있는 Base64 문자열 샘플:", paddedBase64.substring(0, 200))
-            throw new Error("Base64 디코딩 실패: 올바르지 않은 Base64 문자열")
-          }
-          
-          const bytes = new Uint8Array(binaryString.length)
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
-          }
-          
-          console.log("디코딩된 바이트 크기:", bytes.length)
-          
-          const blob = new Blob([bytes], { type: 'application/octet-stream' })
-          const blobUrl = URL.createObjectURL(blob)
-          
-          // sessionStorage에는 작은 데이터만 저장
-          sessionStorage.setItem('plyBlobUrl', blobUrl)
-          sessionStorage.setItem('sessionId', result.sessionId)
-          sessionStorage.setItem('fileSize', result.fileSize.toString())
-          
-          router.push('/result')
-        } catch (storageError) {
-          console.error("파일 처리 오류:", storageError)
-          alert(`파일 처리 중 오류가 발생했습니다: ${storageError instanceof Error ? storageError.message : "알 수 없는 오류"}`)
-        }
-      } else {
-        throw new Error(result.error || "Processing failed")
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => null)
+        throw new Error(err?.error || `Upload failed: ${uploadRes.status}`)
       }
+      const { download_url } = await uploadRes.json()
+
+      // 2) download_url로 ply 파일 다운로드
+      const plyRes = await fetch(download_url, { method: "GET", mode: "cors" })
+      if (!plyRes.ok) throw new Error(`Download failed: ${plyRes.status}`)
+      const plyBlob = await plyRes.blob()
+
+      // Blob URL 생성 및 세션 저장
+      const blobUrl = URL.createObjectURL(plyBlob)
+      sessionStorage.setItem('plyBlobUrl', blobUrl)
+      sessionStorage.setItem('sessionId', Date.now().toString())
+      sessionStorage.setItem('fileSize', plyBlob.size.toString())
+      router.push('/result')
     } catch (error) {
       console.error("Upload error:", error)
       alert(`처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
