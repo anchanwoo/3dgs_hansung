@@ -192,23 +192,11 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
         console.log(`파싱 완료: ${vertices.length / 3}개 점`)
 
         if (vertices.length > 0) {
-          // === 업샘플링(복제+노이즈) ===
-          const upsampleFactor = 5 // 1이면 그대로, 5면 5배
-          const upVertices: number[] = []
-          const upColors: number[] = []
-          for (let i = 0; i < vertices.length; i += 3) {
-            for (let j = 0; j < upsampleFactor; j++) {
-              upVertices.push(
-                vertices[i] + (Math.random() - 0.5) * 0.01,
-                vertices[i + 1] + (Math.random() - 0.5) * 0.01,
-                vertices[i + 2] + (Math.random() - 0.5) * 0.01
-              )
-              upColors.push(colors[i] ?? 0.2, colors[i + 1] ?? 0.7, colors[i + 2] ?? 1.0)
-            }
-          }
+          // 업샘플링/노이즈/색상 추가 코드 제거
+          // vertices, colors 그대로 BufferGeometry에 사용
           const geom = new THREE.BufferGeometry()
-          geom.setAttribute('position', new THREE.Float32BufferAttribute(upVertices, 3))
-          geom.setAttribute('color', new THREE.Float32BufferAttribute(upColors, 3))
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+          geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
           setGeometry(geom)
           setError(null)
         } else {
@@ -249,11 +237,11 @@ function PointCloud({ plyBlobUrl }: { plyBlobUrl: string }) {
   }
 
   // 자동 회전 애니메이션
-  useFrame((state) => {
-    if (meshRef.current && !error) {
-      meshRef.current.rotation.y += 0.003
-    }
-  })
+  // useFrame((state) => {
+  //   if (meshRef.current && !error) {
+  //     meshRef.current.rotation.y += 0.003
+  //   }
+  // })
 
   if (error) {
     return (

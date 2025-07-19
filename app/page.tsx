@@ -63,11 +63,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 flex flex-col items-center justify-center p-6">
-      <div className="mb-10 flex flex-col items-center">
-        <img src="/logo.png" alt="3DGS Logo" className="w-40 h-40 object-contain drop-shadow-lg" />
-        <h1 className="text-3xl font-bold text-blue-900 mt-4">3D Gaussian Splatting WebApp</h1>
-        <p className="text-gray-600 mt-2">여러 장의 이미지를 업로드해 3D 모델을 만들어보세요!</p>
-      </div>
+      {/* 상단 로고/검색창 부분 제거 */}
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
         <div
           className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${

@@ -86,6 +86,10 @@ export default function LoadingPage() {
       <div className="loading-container">
         <div className="content-container">
           <div className="loading-text">PROCESSING</div>
+          {/* 진행 상태 텍스트 위에 로딩 애니메이션 추가 */}
+          <div className="flex justify-center items-center mb-8">
+            <div className="animate-bounce w-8 h-8 bg-blue-400 rounded-full opacity-70"></div>
+          </div>
           <div className="stage-text">{stage}</div>
           <div className="progress-container">
             <div className="progress-bar">
